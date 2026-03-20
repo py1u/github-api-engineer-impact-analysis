@@ -1,0 +1,21 @@
+# used for testing prompts
+
+Task: For each PR create a function that will store detailed pr information. 
+
+Context:
+- use the api endpoint: "/repos/PostHog/posthog/pulls/{pr_number}"
+- Record the following information from the 
+    - pr number
+    - pr title
+    - state
+    - user.login
+    - created_at
+    - closed_at
+    - merged_at
+    - additions(if exists)
+    - deletions(if exists)
+    - comments(if exists)
+    - review_comments(if exists)
+    - commits(if exists)
+
+
