@@ -1,0 +1,273 @@
+Goal: collect data from posthog github through a python request api approach and store data into /data/raw directory as json.
+
+Task: write a python script to pull PR data. 
+
+Steps:
+1. use "https://api.github.com/search/issues?q=repo:PostHog/posthog+is:pr+is:merged+base:master+closed:2025-12-18..2026-03-18&per_page=100&page=1".
+/raw will store the raw json result
+/processed will store extracing only: PR number, created_at, closed_at into a json format. 
+
+Resources: 
+- use "extract_prs.py" to implement script
+
+Important: Do not execute API call.
+
+---
+
+enhancement: update extract_prs.py script to pull data in chunks. 
+reason: avoids github api result limit
+
+example chunk helper: 
+
+def get_chunks(start, end):
+    chunks = []
+    
+    def split_range(s, e):
+        count = get_total_count(s, e)
+        
+        if count < 800:
+            chunks.append((s, e))
+        else:
+            mid = s + (e - s) / 2
+            split_range(s, mid)
+            split_range(mid, e)
+    
+    split_range(start, end)
+    return chunks
+
+
+---
+
+context: several code changes to the extract_prs.py script. Review the updates for any logic errors.
+
+
+---
+
+Task: For each PR create a function similar to how extract_prs.py was implemented that will store detailed pr information. 
+
+Context:
+- use data from data/processed/prs.json to extract the pr numbers
+- use the api endpoint: "/repos/PostHog/posthog/pulls/{pr_number}"
+# used for testing prompts
+
+Task: For each PR create a function that will store detailed pr information. 
+
+Context:
+- use the api endpoint: "/repos/PostHog/posthog/pulls/{pr_number}"
+- Record the following information from the 
+    - pr number
+    - pr title
+    - state
+    - user.login
+    - created_at
+    - closed_at
+    - merged_at
+    - additions(if exists)
+    - deletions(if exists)
+    - comments(if exists)
+    - review_comments(if exists)
+    - commits(if exists)
+
+ouput all results to a json file(a list of json objects) without extracing raw data and parsing. Go to parsing only the fields specified.
+
+ouput path:
+"/data/processed/prs_detailed.json"
+
+
+---
+
+
+Goal: create a new function called extract_pr_recursive.py
+Use the GraphQL API approach to pull field : values recursively. 
+Follow the same performance constraints I mentioned to avoid rate limiting. 
+
+Context: Fields you must attempt to pull:
+number: The PR ID (Primary Key).
+
+title: Good for dashboard tooltips or debugging.
+
+url: Crucial for the UI. If a manager clicks a bar on your chart, it should link to the PR or user profile.
+
+author { login }: The engineer who shipped the work.
+
+createdAt: When the work started.
+
+mergedAt: When the work actually delivered value. (Difference between this and createdAt gives you Cycle Time).
+
+additions: Lines of code added.
+
+deletions: Lines of code removed.
+
+changedFiles: The footprint of the PR across the codebase.
+
+Review data:
+reviews(first: 50):
+
+author { login }: Who did the review.
+
+state: APPROVED, CHANGES_REQUESTED, or COMMENTED.
+
+createdAt: When they reviewed it. (Helps identify engineers who review code quickly vs. letting it sit).
+
+Comments:
+reviewThreads(first: 50):
+
+isResolved: A boolean showing if the discussion resulted in a fix.
+
+comments(first: 10):
+
+author { login }: Who left the helpful comment.
+
+bodyText: The raw text. (Can be used to count words to measure "depth" of the mentorship, or just check length > 10 to filter out simple "ok" replies).
+
+createdAt: Timestamp of the help.
+
+
+---
+
+Task: Update normalize.py to handle creating 3 tables:PRs, Reviews, Comments. 
+
+Context:
+- parse data/processed prs_graphql_detailed.json 
+- output: convert data into parquet files
+
+Constraints:
+1. table fields that must be normalized into three tables
+
+1. df_prs — Pull Requests 
+pr_id (PK) — unique PR number
+author — PR creator (GitHub username)
+created_at — PR opened timestamp
+merged_at — PR merged timestamp
+additions — lines added
+deletions — lines removed
+
+2. df_reviews — PR Reviews 
+pr_id (FK → df_prs.pr_id)
+reviewer — reviewer username (exclude author)
+state — review state (focus: APPROVED)
+is_bot — if the user is a bot(True, False)
+
+3. df_comments — PR Inline Comments 
+pr_id (FK → df_prs.pr_id)
+commenter — commenter username (exclude author)
+is_bot — if the user is a bot(True, False)
+
+
+Case: The data contains activity from bots performing PR reviews. Do not remove this data. Instead update the "is_bot" based on a condition to determine if it is a bot or not. Modify the code in clean.py inorder to handle checking if a PR comment or review has indications of a bot action. Update the is_bot field. 
+
+
+---
+
+
+Review: I updated clean.py to be used as a helper to decide if a author.login is a bot or not. Review normalize.py and clean.py interaction
+
+
+---
+
+
+task: implement the is_posthog_employee function. This function uses the data/processed/users.txt file and github api path to determine if a contributor is a posthog employee or not. 
+
+context: we want to add a field "is_employee" to all dataframes
+
+
+---
+
+
+Task: implement the pr_cycle_time function in engineer.py. The function calculates the pr duration. 
+
+context: a pr duration is the time from pr created_at to pr_merged at.
+
+result: function is called in main.py to add a "pr_duration" column in the df_prs dataframe. 
+
+
+---
+
+
+task: implement the pr_inferred_type function to add the type of PR
+as a value to df_pr. The column is named "pr_type"
+
+context: each pr has the "title" key and a string value. Parse the beginning of the string using regex to determine the type. 
+
+See "config/type_weights.json":
+- keys: the keyword of a PR title(at the start of the string)"
+- value: a encoded weight
+- you should insert the key as a string NOT the weight value
+
+result: df_pr will have a new column "pr_type" with string values for each of the possible type weight keys. Main.py must call this function in order to add a new column to the dataframe.
+
+
+---
+
+
+Task: review the integration of clean.py, engineer.py, normalize.py within main.py
+
+context: 
+Here is the pipeline
+- normalize.py: used to take parquet files and transform into base dataframes: df_prs, df_reviews, df_comments
+- clean.py: used to determine if a username is a bot type user or not 
+- engineer.py: used to add column for if a PR author is a posthog employee and used to add column for if a PR title is of a specific coventional commit(weight_type key)
+
+if there are logic flow missing or incorrectly written in main.py be sure to modify them. 
+
+result: three dataframes wtih base fields from parquet files + additonal engineered features from imported modules in "/src"
+
+
+---
+
+
+review: employee_cache_file argument. 
+
+context: this is just a file path to data/processed/users.txt which contains a list of users
+
+
+---
+
+
+debug: Failed to fetch employee list: name 'is_bot' is not defined
+context: review the use of is_bot function that is used to return True/False if the user(author.login) is a bot or not.
+
+- "is_bot" is a field that must be added to all dataframes. 
+- is_bot() function takes author.login value as input and returns True/False to output
+- return value is used to fill the "is_bot" field for each dataframe record in a new column "is_bot"
+
+
+---
+
+
+refactor: split the dataframe creation and extra field/column creation pipeline and streamlit logic. 
+
+context: 
+- use main.py for dataframe creation and extra column logic
+- use app.py(same directory level as main.py) to import in the dataframes and streamlit logic.
+
+result: refactored and cleaner codebase logic
+
+
+---
+
+
+fix: app.py contains logic on "word_count"]
+
+refactor: comment out and modify logic to avoid using word_count as a analytical metric in the streamlit dashboard. Leave other metrics the same.
+
+
+
+---
+
+
+
+enhancement: in main.py add data visualizations that show the spread of data between top 5 and all other contributors this exposes the difference between top 5. 
+
+Show the distribution of top 10, 50, 100 as well
+
+use data visualizations like scatter plots, heatmaps, bar charts, time series lines for elements of PR, comments, and reviews. 
+
+include a distinction between bots and no bots. We want to see how bots compare to human users(note bots are never considered in top 5 for scoring).
+
+
+
+---
+
+
+

@@ -1,0 +1,63 @@
+query ($cursor: String) {
+  search(query: "repo:PostHog/posthog is:pr is:merged merged:2025-12-18..2026-03-18", type: ISSUE, first: 100, after: $cursor) {
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      ... on PullRequest {
+        number
+        title
+        url
+        author {
+          login
+        }
+        createdAt
+        mergedAt
+        additions
+        deletions
+        changedFiles
+        
+        labels(first: 5) {
+          nodes {
+            name
+          }
+        }
+        
+        reviews(first: 50) {
+          nodes {
+            author {
+              login
+            }
+            state
+            createdAt
+          }
+        }
+        
+        reviewThreads(first: 50) {
+          nodes {
+            isResolved
+            comments(first: 10) {
+              nodes {
+                author {
+                  login
+                }
+                bodyText
+                createdAt
+              }
+            }
+          }
+        }
+        
+        comments(first: 50) {
+          nodes {
+            author {
+              login
+            }
+            createdAt
+          }
+        }
+      }
+    }
+  }
+}
