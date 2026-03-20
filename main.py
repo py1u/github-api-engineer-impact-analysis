@@ -2,11 +2,12 @@ import os
 import pandas as pd
 from src.engineer import pr_cycle_time, pr_inferred_type, append_is_employee, append_is_bot
 
-def get_dataframes():
+def build_analytics():
     """
-    Reads the base Parquet output from the normalization stage and layers on all 
-    engineered attributes and data transformations prior to analytical UI ingestion.
+    Reads the base Parquet output from the normalization stage, layers on all 
+    engineered attributes, and saves finalized tables to the analytics directory.
     """
+    print("Loading base transformed datasets...")
     df_prs = pd.read_parquet("data/transform/prs.parquet", engine="pyarrow")
     df_reviews = pd.read_parquet("data/transform/reviews.parquet", engine="pyarrow")
     df_comments = pd.read_parquet("data/transform/comments.parquet", engine="pyarrow")
@@ -33,4 +34,14 @@ def get_dataframes():
     df_reviews = append_is_bot(df_reviews, 'reviewer')
     df_comments = append_is_bot(df_comments, 'commenter')
     
-    return df_prs, df_reviews, df_comments
+    analytics_dir = "data/analytics"
+    os.makedirs(analytics_dir, exist_ok=True)
+    
+    print("Saving engineered datasets to /data/analytics...")
+    df_prs.to_parquet(f"{analytics_dir}/prs_engineered.parquet", engine='pyarrow', index=False)
+    df_reviews.to_parquet(f"{analytics_dir}/reviews_engineered.parquet", engine='pyarrow', index=False)
+    df_comments.to_parquet(f"{analytics_dir}/comments_engineered.parquet", engine='pyarrow', index=False)
+    print("Successfully built analytics tables!")
+
+if __name__ == "__main__":
+    build_analytics()

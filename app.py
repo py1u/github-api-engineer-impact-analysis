@@ -4,14 +4,15 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 from functools import reduce
-from main import get_dataframes
 
 st.set_page_config(page_title="PostHog Engineering Impact Dashboard", layout="wide")
 
 @st.cache_data
 def load_data():
-    """Loads and caches the fully engineered dataframes from the logic pipeline."""
-    df_prs, df_reviews, df_comments = get_dataframes()
+    """Loads and caches the fully engineered dataframes from the static analytics exports."""
+    df_prs = pd.read_parquet("data/analytics/prs_engineered.parquet", engine="pyarrow")
+    df_reviews = pd.read_parquet("data/analytics/reviews_engineered.parquet", engine="pyarrow")
+    df_comments = pd.read_parquet("data/analytics/comments_engineered.parquet", engine="pyarrow")
     
     if 'created_at' in df_prs.columns:
         df_prs['created_at'] = pd.to_datetime(df_prs['created_at'])
