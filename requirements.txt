@@ -1,0 +1,9 @@
+requests
+pygithub
+pandas
+dotenv
+seaborn
+plotly
+streamlit
+gql
+pyarrow
