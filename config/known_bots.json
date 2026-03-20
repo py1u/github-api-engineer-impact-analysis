@@ -1,0 +1,23 @@
+{
+    "known_bots": [
+        "github-actions",
+        "github-advanced-security",
+        "dependabot",
+        "posthog-js-upgrader",
+        "scheduled-actions-posthog",
+        "copilot-pull-request-reviewer",
+        "copilot-swe-agent",
+        "chatgpt-codex-connector",
+        "cubic-dev-ai",
+        "greptile-apps",
+        "cursor",
+        "clickhouse-sync-posthog",
+        "graphite-app",
+        "mendral-app",
+        "hex-security-app",
+        "inkeep",
+        "posthog-bot",
+        "tests-posthog",
+        "stamphog"
+    ]
+}
