@@ -1,0 +1,57 @@
+# Structure
+
+I structured this project as modular as possible for data collection, transformation, and aggregation of impact metrics. The purpose was to provide readability and clear seperation of concerns making debugging and future enhancements in the project possible.
+
+```
+.
+├── __pycache__
+│   └── main.cpython-313.pyc
+├── api
+│   ├── extract_pr_details.py
+│   ├── extract_pr_recursive.py
+│   └── extract_prs.py
+├── app.py
+├── config
+│   ├── known_bots.json
+│   ├── posthog_employees.json
+│   └── type_weights.json
+├── data
+│   ├── processed
+│   │   ├── prs_graphql_detailed.json
+│   │   ├── prs.json
+│   │   └── users.txt
+│   ├── raw
+│   │   └── prs.json
+│   └── transform
+│       ├── comments.parquet
+│       ├── prs.parquet
+│       └── reviews.parquet
+├── docs
+│   ├── agent_sessions
+│   │   ├── 01.txt
+│   │   └── read_this.md
+│   ├── intro.md
+│   └── samples
+│       ├── sample_graphql.txt
+│       ├── sample_pr_comment.json
+│       └── sample_pr_detailed.json
+├── instructions.md
+├── main.py
+├── pyproject.toml
+├── README.md
+├── report.md
+├── requirements.txt
+├── src
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-313.pyc
+│   │   ├── clean.cpython-313.pyc
+│   │   └── engineer.cpython-313.pyc
+│   ├── clean.py
+│   ├── engineer.py
+│   └── normalize.py
+└── test
+    ├── api.txt
+    ├── sandbox.py
+    └── sandbox.txt
+```
